@@ -2,7 +2,7 @@ import { config } from "https://deno.land/x/dotenv@v3.1.0/mod.ts";
 import { Bootstrapped } from "https://deno.land/x/inject@v0.1.2/mod.ts";
 import { ethers } from "https://esm.sh/ethers?dts";
 
-import { LineService, LoadingService } from "./services/mod.ts";
+import { LineService, WatchingService } from "./services/mod.ts";
 
 const { INFURA_URL, CONTRACT_ADDRESS } = config();
 
@@ -19,7 +19,7 @@ export class Tracker {
   private readonly contract: ethers.Contract;
 
   constructor(
-    private readonly loadingService: LoadingService,
+    private readonly watchingService: WatchingService,
     private readonly lineService: LineService
   ) {
     this.provider = new ethers.providers.WebSocketProvider(INFURA_URL);
@@ -52,7 +52,7 @@ export class Tracker {
       }
     );
 
-    this.loadingService.showLoading();
+    this.watchingService.start();
   }
 
   private async sendNotify(
@@ -64,12 +64,12 @@ export class Tracker {
     const url = `https://www.larvalabs.com/public/images/cryptopunks/punk${punkIndexStr}.png`;
     const message = `${text} \nPlease refer to https://etherscan.io/tx/${transactionHash}`;
 
-    await this.loadingService.stopLoadinng();
+    await this.watchingService.stop();
     await this.lineService.sendNotify({
       message,
       imageFullsize: url,
       imageThumbnail: url,
     });
-    this.loadingService.showLoading();
+    this.watchingService.start();
   }
 }

@@ -6,10 +6,10 @@ import {
 } from "https://denopkg.com/iamnathanj/cursor@v2.2.0/mod.ts";
 
 @Injectable()
-export class LoadingService {
+export class WatchingService {
   private loading?: number;
 
-  showLoading(): void {
+  start(): void {
     let i = 0;
     Deno.stdout.writeSync(new TextEncoder().encode("\x1b[36m> \x1b[0m"));
     Deno.stdout.writeSync(new TextEncoder().encode("now watching"));
@@ -25,7 +25,7 @@ export class LoadingService {
     }, 500);
   }
 
-  async stopLoadinng(): Promise<void> {
+  async stop(): Promise<void> {
     if (this.loading) {
       clearInterval(this.loading);
       await nextLine();
