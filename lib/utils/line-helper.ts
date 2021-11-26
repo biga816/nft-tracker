@@ -20,5 +20,6 @@ export async function sendLineNotify(params: {
     body,
   });
 
-  console.log(await res.json());
+  const log = { ...params, ...(await res.json()) };
+  console.log(JSON.stringify(log, null, 2));
 }
