@@ -1,13 +1,15 @@
+import { Injectable } from "https://deno.land/x/inject@v0.1.2/mod.ts";
 import {
   clearRight,
   goLeft,
   nextLine,
 } from "https://denopkg.com/iamnathanj/cursor@v2.2.0/mod.ts";
 
+@Injectable()
 export class LoadingService {
   private loading?: number;
 
-  showLoading() {
+  showLoading(): void {
     let i = 0;
     Deno.stdout.writeSync(new TextEncoder().encode("\x1b[36m> \x1b[0m"));
     Deno.stdout.writeSync(new TextEncoder().encode("now watching"));
@@ -23,7 +25,7 @@ export class LoadingService {
     }, 500);
   }
 
-  async stopLoadinng() {
+  async stopLoadinng(): Promise<void> {
     if (this.loading) {
       clearInterval(this.loading);
       await nextLine();
