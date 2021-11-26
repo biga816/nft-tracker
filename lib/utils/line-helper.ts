@@ -11,7 +11,7 @@ export async function sendLineNotify(params: {
     ...params,
   });
 
-  const res = await fetch(LINE_URL, {
+  await fetch(LINE_URL, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${LINE_TOKEN}`,
@@ -20,6 +20,5 @@ export async function sendLineNotify(params: {
     body,
   });
 
-  const log = { ...params, ...(await res.json()) };
-  console.log(JSON.stringify(log, null, 2));
+  console.log(JSON.stringify(params, null, 2));
 }

@@ -1,7 +1,9 @@
 import { config } from "https://deno.land/x/dotenv@v3.1.0/mod.ts";
 import Ask from "https://deno.land/x/ask@1.0.6/mod.ts";
 import { ethers } from "https://esm.sh/ethers?dts";
+
 import { sendLineNotify } from "./utils/line-helper.ts";
+import { LoadingService } from "./services/loading-service.ts";
 
 const { INFURA_URL, CONTRACT_ADDRESS } = config();
 
@@ -23,6 +25,7 @@ const abi = [
   "event PunkOffered(uint indexed punkIndex, uint minValue, address indexed toAddress)",
 ];
 const erc721 = new ethers.Contract(CONTRACT_ADDRESS, abi, provider);
+const loadingService = new LoadingService();
 
 console.log("blockNumber:", await provider.getBlockNumber());
 console.log("target:", target || "none");
@@ -36,7 +39,9 @@ const sendNotify = async (
   const url = `https://www.larvalabs.com/public/images/cryptopunks/punk${punkIndexStr}.png`;
   const message = `${text} \nPlease refer to https://etherscan.io/tx/${transactionHash}`;
 
+  await loadingService.stopLoadinng();
   await sendLineNotify({ message, imageFullsize: url, imageThumbnail: url });
+  loadingService.showLoading();
 };
 
 erc721.on("PunkTransfer", (from, to, punkIndex, { transactionHash }) => {
@@ -51,3 +56,5 @@ erc721.on("PunkOffered", (punkIndex, minValue, _, { transactionHash }) => {
   const msg = `PunkOffered: #${punkIndex} was offerd for ${etherStr} ether.`;
   sendNotify(msg, transactionHash, punkIndex);
 });
+
+loadingService.showLoading();
