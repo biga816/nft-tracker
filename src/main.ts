@@ -1,17 +1,75 @@
-import Ask from "https://deno.land/x/ask@1.0.6/mod.ts";
-import { bootstrap } from "https://deno.land/x/inject@v0.1.2/mod.ts";
+import { config } from "https://deno.land/x/dotenv@v3.1.0/mod.ts";
+import { Bootstrapped } from "https://deno.land/x/inject@v0.1.2/mod.ts";
+import { ethers } from "https://esm.sh/ethers?dts";
 
-import { Tracker } from "./tracker.ts";
+import { LineService, WatchingService } from "./services/mod.ts";
 
-const ask = new Ask();
-const answer = await ask.prompt([
-  {
-    name: "address",
-    type: "input",
-    message: "target address",
-    validate: (val) => val === "" || !isNaN(parseInt(String(val))),
-  },
-]);
+const { INFURA_URL, CONTRACT_ADDRESS } = config();
 
-const tracker = bootstrap(Tracker);
-await tracker.run(String(answer.address));
+const abi = [
+  "event Transfer(address indexed from, address indexed to, uint256 value)",
+  "event PunkTransfer(address indexed from, address indexed to, uint256 punkIndex)",
+  "event PunkBought(uint indexed punkIndex, uint value, address indexed fromAddress, address indexed toAddress)",
+  "event PunkOffered(uint indexed punkIndex, uint minValue, address indexed toAddress)",
+];
+
+@Bootstrapped()
+export class Main {
+  private readonly provider: ethers.providers.WebSocketProvider;
+  private readonly contract: ethers.Contract;
+
+  constructor(
+    private readonly watchingService: WatchingService,
+    private readonly lineService: LineService
+  ) {
+    this.provider = new ethers.providers.WebSocketProvider(INFURA_URL);
+    this.contract = new ethers.Contract(CONTRACT_ADDRESS, abi, this.provider);
+  }
+
+  async run(address?: string): Promise<void> {
+    console.log("blockNumber:", await this.provider.getBlockNumber());
+    console.log("target:", address || "none");
+
+    this.contract.on(
+      "PunkTransfer",
+      (from, to, punkIndex, { transactionHash }) => {
+        const msg = `PunkTransfer: #${punkIndex} was transferd from ${from} to ${to}.`;
+        if (
+          !address ||
+          address.toLocaleLowerCase() === from.toLocaleLowerCase()
+        ) {
+          this.sendNotify(msg, transactionHash, punkIndex);
+        }
+      }
+    );
+
+    this.contract.on(
+      "PunkOffered",
+      (punkIndex, minValue, _, { transactionHash }) => {
+        const etherStr = ethers.utils.formatEther(minValue);
+        const msg = `PunkOffered: #${punkIndex} was offerd for ${etherStr} ether.`;
+        this.sendNotify(msg, transactionHash, punkIndex);
+      }
+    );
+
+    this.watchingService.start();
+  }
+
+  private async sendNotify(
+    text: string,
+    transactionHash: string,
+    punkIndex: number
+  ): Promise<void> {
+    const punkIndexStr = punkIndex.toString().padStart(4, "0");
+    const url = `https://www.larvalabs.com/public/images/cryptopunks/punk${punkIndexStr}.png`;
+    const message = `${text} \nPlease refer to https://etherscan.io/tx/${transactionHash}`;
+
+    await this.watchingService.stop();
+    await this.lineService.sendNotify({
+      message,
+      imageFullsize: url,
+      imageThumbnail: url,
+    });
+    this.watchingService.start();
+  }
+}
