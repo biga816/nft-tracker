@@ -10,17 +10,13 @@ export class LineService {
     imageThumbnail?: string;
     imageFullsize?: string;
   }): Promise<void> {
-    const body = new URLSearchParams({
-      ...params,
-    });
-
     await fetch(LINE_URL, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${LINE_TOKEN}`,
         "Content-Type": "application/x-www-form-urlencoded",
       },
-      body,
+      body: new URLSearchParams(params),
     });
 
     console.log(JSON.stringify(params, null, 2));
